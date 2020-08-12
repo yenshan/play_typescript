@@ -1,51 +1,66 @@
-let canvas = <HTMLCanvasElement>document.getElementById("canvas");
-let ctx = canvas.getContext("2d");
-
-ctx.imageSmoothingEnabled = false;
-// ctx.fillStyle = "rgc(255,255,255)";
-// ctx.fillRect(0, 0, canvas.width, canvas.height);
+function create_world(id: string) {
+    let canvas = <HTMLCanvasElement>document.getElementById(id);
+    let ctx = canvas.getContext("2d");
+    ctx.imageSmoothingEnabled = false;
+    return {
+        width: canvas.width,
+        heigth: canvas.height,
+        ctx: ctx,
+    };
+}
 
 class Chara {
     public x: number;
     public y: number;
     public image: HTMLImageElement;
     public init: boolean;
-    constructor(x: number, y: number) {
+    public frame: number;
+    private anime_frames = {
+        run: { idx: 0, frames: [1, 2, 3] },
+    };
+    constructor(img: string) {
         this.init = false;
-        this.x = x;
-        this.y = y;
         let image = new Image();
         let self = this;
         image.onload = function () {
             self.init = true;
         };
-        image.src = "test.png";
+        image.src = img;
         this.image = image;
+        this.frame = 0;
+    }
+    setPos(x: number, y: number) {
+        this.x = x;
+        this.y = y;
+        return this;
+    }
+    anime(state: string) {
+        let { idx, frames } = this.anime_frames[state];
+        if (++idx >= frames.length) idx = 0;
+        this.frame = frames[idx];
+        this.anime_frames[state] = { idx: idx, frames: frames };
     }
 }
 
-function draw_obj(
-    ctx: CanvasRenderingContext2D,
-    { x, y, image },
-    frame: number
-) {
-    ctx.drawImage(image, 0, 10 * frame, 10, 10, x, y, 100, 100);
+function draw_obj({ ctx }, { x, y, image, frame }) {
+    ctx.drawImage(image, 0, 16 * frame, 16, 16, x, y, 100, 100);
 }
 
-function clearScreen(ctx) {
-    ctx.fillStyle = "rgb(255,255,255)";
+function clear_screen({ ctx }) {
+    ctx.fillStyle = "rgb(0,0,0)";
     ctx.fillRect(0, 0, 400, 400);
 }
 
-let chara = new Chara(100, 100);
+let world = create_world("canvas");
+let chara = new Chara("chara.png").setPos(100, 100);
 
-let frame = 0;
+let frame = 1;
 function main_loop() {
     if (!chara.init) return;
 
-    clearScreen(ctx);
-    draw_obj(ctx, chara, frame);
-    frame = (frame + 1) % 2;
+    chara.anime("run");
+    clear_screen(world);
+    draw_obj(world, chara);
 }
 
 setInterval("main_loop()", 100);
