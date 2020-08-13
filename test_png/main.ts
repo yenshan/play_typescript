@@ -26,29 +26,9 @@ function next_frame(idx, frames) {
     return [fidx, frames[fidx]];
 }
 
-class AnimeCounter {
-    private cnt: number;
-    private max_n: number;
-
-    constructor(n: number) {
-        this.max_n = n;
-    }
-    count() {
-        if (this.cnt <= this.max_n) {
-            this.cnt++;
-            return false;
-        }
-        this.cnt = 0;
-        return true;
-    }
-    reset() {
-        this.cnt = this.max_n;
-    }
-}
-
-const chara_anime_frames = {
-    stop: { counter: new AnimeCounter(20), frames: [0, 1] },
-    run: { counter: new AnimeCounter(2), frames: [2, 3, 4] }
+const chara_anime_info = {
+    stop: { anime_count: 20, frames: [0, 1] },
+    run: { anime_count: 2, frames: [2, 3, 4] }
 };
 
 class Chara {
@@ -62,7 +42,8 @@ class Chara {
     direction: Direction;
 
     private frame_idx: number;
-    private anime_frames = chara_anime_frames;
+    private anime_frames = chara_anime_info;
+    private anime_counter = 0;
 
     move_amount = {
         nutral: 0,
@@ -90,15 +71,19 @@ class Chara {
     }
     move(state: CharaState, dir: Direction) {
         if (state == this.state && dir == this.direction) return;
-        this.anime_frames[this.state].counter.reset();
+        this.anime_counter = this.anime_frames[state].anime_count;
         this.state = state;
         this.direction = dir;
         this.frame_idx = 0;
     }
     anime() {
-        let { counter, frames } = this.anime_frames[this.state];
+        let { anime_count, frames } = this.anime_frames[this.state];
 
-        if (!counter.count()) return;
+        if (this.anime_counter <= anime_count) {
+            this.anime_counter++;
+            return;
+        }
+        this.anime_counter = 0;
 
         let [idx, frame] = next_frame(this.frame_idx, frames);
 
