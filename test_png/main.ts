@@ -21,22 +21,43 @@ enum CharaState {
     UPDOWN = "updown",
 }
 
+function next_frame(idx, frames) {
+    let fidx = (idx + 1) % frames.length;
+    return [fidx, frames[fidx]];
+}
+
+function anime_counter(n: number) {
+    let count = 0;
+    return function () {
+        if (count <= n) {
+            count++;
+            return false;
+        }
+        count = 0;
+        return true;
+    }
+}
+
 class Chara {
     x: number;
     y: number;
     image: HTMLImageElement;
     init: boolean;
     frame: number;
+
     private state: CharaState;
     direction: Direction;
+
+    private frame_idx: number;
     anime_frames = {
-        stop: { idx: 0, frames: [0] },
-        run: { idx: 0, frames: [1, 2, 3] },
+        stop: [0],
+        run: [1, 2, 3],
     };
+
     move_amount = {
         nutral: 0,
-        left: -8,
-        right: 8,
+        left: -4,
+        right: 4,
     };
     constructor(img: string) {
         this.init = false;
@@ -50,6 +71,7 @@ class Chara {
         this.frame = 0;
         this.state = CharaState.STOP;
         this.direction = Direction.NUTRAL;
+        this.frame_idx = 0;
     }
     setPos(x: number, y: number) {
         this.x = x;
@@ -57,27 +79,58 @@ class Chara {
         return this;
     }
     move(state: CharaState, dir: Direction) {
+        if (state == this.state && dir == this.direction) return;
         this.state = state;
         this.direction = dir;
+        this.frame_idx = 0;
     }
+    private counter = anime_counter(3);
     anime() {
-        let { idx, frames } = this.anime_frames[this.state];
-        if (++idx >= frames.length) idx = 0;
+        if (!this.counter()) return;
 
-        this.frame = frames[idx]; // 次のアニメーションフレーム
-        this.anime_frames[this.state].idx = idx; // フレーム情報の更新
+        let [idx, frame] = next_frame(
+            this.frame_idx,
+            this.anime_frames[this.state]
+        );
+        this.frame = frame;
+        this.frame_idx = idx;
 
         this.x += this.move_amount[this.direction];
+
     }
 }
 
+const ZOOM = 4;
+const CHAR_WIDTH = 16;
+const CHAR_HEIGHT = 16;
+
 function draw_obj({ ctx }, { x, y, image, frame, direction }) {
     if (direction == Direction.NUTRAL || direction == Direction.RIGHT) {
-        ctx.drawImage(image, 0, 16 * frame, 16, 16, x, y, 100, 100);
+        ctx.drawImage(
+            image,
+            0,
+            16 * frame,
+            CHAR_WIDTH,
+            CHAR_HEIGHT,
+            x,
+            y,
+            CHAR_WIDTH * ZOOM,
+            CHAR_HEIGHT * ZOOM
+        );
     } else {
         ctx.save(); // canvas状態を保存
         ctx.transform(-1, 0, 0, 1, 0, 0); // 画像を左右反転させる
-        ctx.drawImage(image, 0, 16 * frame, 16, 16, -x - 100, y, 100, 100);
+        ctx.drawImage(
+            image,
+            0,
+            16 * frame,
+            CHAR_WIDTH,
+            CHAR_HEIGHT,
+            -x - CHAR_WIDTH * ZOOM,
+            y,
+            CHAR_WIDTH * ZOOM,
+            CHAR_HEIGHT * ZOOM
+        );
         ctx.restore(); // canvasの状態をsaveされた状態に戻す
     }
 }
@@ -138,6 +191,6 @@ function main_loop() {
     draw_obj(world, chara);
 }
 
-setInterval("main_loop()", 30);
+setInterval("main_loop()", 16);
 document.onkeydown = handleKeyDown;
 document.onkeyup = handleKeyUp;
