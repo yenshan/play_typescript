@@ -37,6 +37,7 @@ class Chara {
     image: HTMLImageElement;
     init: boolean;
     frame: number;
+    draged: boolean;
 
     private state: CharaState;
     direction: Direction;
@@ -68,6 +69,15 @@ class Chara {
         this.x = x;
         this.y = y;
         return this;
+    }
+    setRelativePos(dx: number, dy: number) {
+        this.x += dx;
+        this.y += dy;
+        return this;
+    }
+    isInside(x: number, y: number) {
+        return (this.x < x && x < this.x + CHAR_WIDTH * ZOOM
+            && this.y < y && y && this.y + CHAR_HEIGHT * ZOOM);
     }
     move(state: CharaState, dir: Direction) {
         if (state == this.state && dir == this.direction) return;
@@ -144,29 +154,6 @@ enum KeyCode {
     C = 67
 }
 
-function handleKeyDown(e) {
-    const key_func_table = {
-        37: () => chara.move(CharaState.RUN, Direction.LEFT), // Left
-        39: () => chara.move(CharaState.RUN, Direction.RIGHT), // Right
-        38: () => { }, // Up
-        40: () => { }, // Down
-        88: () => { }, // x
-        67: () => { }  // c
-    }
-    key_func_table[e.keyCode]();
-}
-
-function handleKeyUp(e) {
-    const key_func_table = {
-        37: () => chara.move(CharaState.STOP, Direction.NUTRAL), // Left
-        39: () => chara.move(CharaState.STOP, Direction.NUTRAL), // Right
-        38: () => { }, // Up
-        40: () => { }, // Down
-        88: () => { }, // x
-        67: () => { }  // c
-    }
-    key_func_table[e.keyCode]();
-}
 
 let world = create_world("canvas");
 let chara = new Chara("chara.png").setPos(100, 100);
@@ -180,5 +167,53 @@ function main_loop() {
 }
 
 setInterval("main_loop()", 16);
-document.onkeydown = handleKeyDown;
-document.onkeyup = handleKeyUp;
+
+document.onkeydown = function (e) {
+    const key_func_table = {
+        37: () => chara.move(CharaState.RUN, Direction.LEFT), // Left
+        39: () => chara.move(CharaState.RUN, Direction.RIGHT), // Right
+        38: () => { }, // Up
+        40: () => { }, // Down
+        88: () => { }, // x
+        67: () => { }  // c
+    }
+    key_func_table[e.keyCode]();
+}
+
+document.onkeyup = function (e) {
+    const key_func_table = {
+        37: () => chara.move(CharaState.STOP, Direction.NUTRAL), // Left
+        39: () => chara.move(CharaState.STOP, Direction.NUTRAL), // Right
+        38: () => { }, // Up
+        40: () => { }, // Down
+        88: () => { }, // x
+        67: () => { }  // c
+    }
+    key_func_table[e.keyCode]();
+}
+
+let mouseDown = false;
+let mousePos = { x: 0, y: 0 }
+document.onmousedown = (e) => {
+    mouseDown = true;
+    if (chara.isInside(e.clientX, e.clientY)) {
+        chara.draged = true;
+        mousePos.x = e.clientX;
+        mousePos.y = e.clientY;
+    }
+}
+document.onmouseup = _ => {
+    mouseDown = false;
+    chara.draged = false;
+}
+
+document.onmousemove = function (e) {
+    if (mouseDown && chara.draged) {
+        let dx = e.clientX - mousePos.x;
+        let dy = e.clientY - mousePos.y;
+        chara.setRelativePos(dx, dy);
+        mousePos.x = e.clientX;
+        mousePos.y = e.clientY;
+    }
+}
+
