@@ -5,7 +5,7 @@ function create_world(id: string) {
     return {
         canvas: canvas,
         width: canvas.width,
-        heigth: canvas.height,
+        height: canvas.height,
         ctx: ctx,
     };
 }
@@ -65,6 +65,7 @@ class Chara {
         this.state = CharaState.STOP;
         this.direction = Direction.NUTRAL;
         this.frame_idx = 0;
+        this.draged = false;
     }
     setPos(x: number, y: number) {
         this.x = x;
@@ -78,7 +79,7 @@ class Chara {
     }
     isInside(x: number, y: number) {
         return (this.x < x && x < this.x + CHAR_WIDTH * ZOOM
-            && this.y < y && y && this.y + CHAR_HEIGHT * ZOOM);
+            && this.y < y && y < this.y + CHAR_HEIGHT * ZOOM);
     }
     move(state: CharaState, dir: Direction) {
         if (state == this.state && dir == this.direction) return;
@@ -141,20 +142,46 @@ function draw_obj({ ctx }, { x, y, image, frame, direction }) {
     }
 }
 
-function clear_screen({ ctx }) {
-    ctx.fillStyle = "rgb(0,0,0)";
-    ctx.fillRect(0, 0, 400, 400);
+function clear_screen({ ctx, width, height }) {
+    // ctx.fillStyle = "rgb(100,100,100)";
+    ctx.clearRect(0, 0, width, height);
 }
 
-enum KeyCode {
-    LEFT = 37,
-    RIGHT = 39,
-    UP = 38,
-    DOWN = 40,
-    X = 88,
-    C = 67
+
+function draw_pad({ ctx }) {
+    let _ctx: CanvasRenderingContext2D = ctx;
+    _ctx.strokeStyle = "rgb(255,255,255)"
+    _ctx.strokeRect(5, 360, 290, 30);
 }
 
+const STICK_DEAFULT_X = 150
+const STICK_DEFAULT_Y = 375
+let stick = { x: STICK_DEAFULT_X, y: STICK_DEFAULT_Y, draged: false }
+function draw_stick({ ctx }, { x, y }) {
+    let _ctx: CanvasRenderingContext2D = ctx;
+    _ctx.beginPath();
+    _ctx.arc(x, y, 10, 0, Math.PI * 2, true);
+    _ctx.strokeStyle = "rgb(255,255,255)"
+    _ctx.stroke();
+
+}
+
+function is_inside({ x, y }, ex: number, ey: number) {
+    let _x = x - 10;
+    let _y = y - 10;
+    return (_x < ex && ex < _x + 40
+        && _y < ey && ey < _y + 40);
+}
+
+function check_stick_position({ x, y }) {
+    if (x > 200) {
+        chara.move(CharaState.RUN, Direction.RIGHT);
+    } else if (x < 100) {
+        chara.move(CharaState.RUN, Direction.LEFT);
+    } else {
+        chara.move(CharaState.STOP, Direction.NUTRAL);
+    }
+}
 
 let world = create_world("canvas");
 let chara = new Chara("chara.png").setPos(100, 100);
@@ -163,8 +190,13 @@ function main_loop() {
     if (!chara.init) return;
 
     chara.anime();
+    check_stick_position(stick);
+
+
     clear_screen(world);
+    draw_stick(world, stick);
     draw_obj(world, chara);
+    draw_pad(world);
 }
 
 setInterval("main_loop()", 16);
@@ -193,11 +225,21 @@ document.onkeyup = function (e) {
     key_func_table[e.keyCode]();
 }
 
+
+// ----------------------------------------------------------------
+// ----------------------------------------------------------------
+
 let mouseDown = false;
 let mousePos = { x: 0, y: 0 }
 
 function handleMouseDown(e) {
     mouseDown = true;
+    if (is_inside(stick, e.clientX, e.clientY)) {
+        stick.draged = true;
+        mousePos.x = e.clientX;
+        mousePos.y = e.clientY;
+        return;
+    }
     if (chara.isInside(e.clientX, e.clientY)) {
         chara.draged = true;
         mousePos.x = e.clientX;
@@ -207,9 +249,17 @@ function handleMouseDown(e) {
 function handleMouseUp(e) {
     mouseDown = false;
     chara.draged = false;
+    stick = { x: STICK_DEAFULT_X, y: STICK_DEFAULT_Y, draged: false };
 }
 function handleMouseMove(e) {
-    if (mouseDown && chara.draged) {
+    if (!mouseDown) return;
+    if (stick.draged) {
+        let dx = e.clientX - mousePos.x;
+        stick.x += dx;
+        mousePos.x = e.clientX;
+        mousePos.y = e.clientY;
+    }
+    if (chara.draged) {
         let dx = e.clientX - mousePos.x;
         let dy = e.clientY - mousePos.y;
         chara.setRelativePos(dx, dy);
