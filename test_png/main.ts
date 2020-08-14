@@ -3,6 +3,7 @@ function create_world(id: string) {
     let ctx = canvas.getContext("2d");
     ctx.imageSmoothingEnabled = false;
     return {
+        canvas: canvas,
         width: canvas.width,
         heigth: canvas.height,
         ctx: ctx,
@@ -194,7 +195,8 @@ document.onkeyup = function (e) {
 
 let mouseDown = false;
 let mousePos = { x: 0, y: 0 }
-document.onmousedown = (e) => {
+
+function handleMouseDown(e) {
     mouseDown = true;
     if (chara.isInside(e.clientX, e.clientY)) {
         chara.draged = true;
@@ -202,12 +204,11 @@ document.onmousedown = (e) => {
         mousePos.y = e.clientY;
     }
 }
-document.onmouseup = _ => {
+function handleMouseUp(e) {
     mouseDown = false;
     chara.draged = false;
 }
-
-document.onmousemove = function (e) {
+function handleMouseMove(e) {
     if (mouseDown && chara.draged) {
         let dx = e.clientX - mousePos.x;
         let dy = e.clientY - mousePos.y;
@@ -217,3 +218,30 @@ document.onmousemove = function (e) {
     }
 }
 
+document.onmousedown = function (e) {
+    e.preventDefault();
+    handleMouseDown(e);
+}
+document.onmouseup = function (e) {
+    e.preventDefault();
+    handleMouseUp(e);
+}
+document.onmousemove = function (e) {
+    e.preventDefault();
+    handleMouseMove(e);
+}
+
+world.canvas.ontouchstart = function (e) {
+    e.preventDefault();
+    handleMouseDown(e.changedTouches[0]);
+}
+world.canvas.ontouchend = function (e) {
+    e.preventDefault();
+    handleMouseUp(e.changedTouches[0]);
+}
+world.canvas.ontouchmove = function (e) {
+    e.preventDefault();
+    handleMouseMove(e.changedTouches[0]);
+}
+
+document.addEventListener('touchstart', e => e.preventDefault(), { passive: false });
